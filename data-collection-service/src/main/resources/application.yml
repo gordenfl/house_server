@@ -1,0 +1,35 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: data-collection-service
+  
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: house_user
+    password: house_password
+    virtual-host: /
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Zillow API Configuration
+zillow:
+  api:
+    key: ${ZILLOW_API_KEY:your-zillow-api-key}
+    base-url: ${ZILLOW_BASE_URL:https://www.zillow.com/webservice}
+
+# RabbitMQ Configuration
+rabbitmq:
+  queue:
+    zillow-data: zillow.property.data
+
+logging:
+  level:
+    com.house.datacollectionservice: DEBUG
