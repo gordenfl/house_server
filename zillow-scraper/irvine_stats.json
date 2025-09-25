@@ -1,0 +1,17 @@
+{
+  "total_houses": 10,
+  "total_images": 10,
+  "average_price": 1130000.0,
+  "average_bedrooms": 3.6,
+  "average_bathrooms": 3.0,
+  "house_types": {
+    "Condo": 3,
+    "House": 5,
+    "Townhouse": 2
+  },
+  "price_range": {
+    "min": 750000,
+    "max": 1650000
+  },
+  "scraped_at": "2025-09-20T03:18:08.794701"
+}
