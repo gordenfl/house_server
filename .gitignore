@@ -1,3 +1,6 @@
 .DS_Store
 .pids
 zillow-scraper/.DS_Store
+frontend/.DS_Store
+frontend/.vscode    
+frontend/node_modules

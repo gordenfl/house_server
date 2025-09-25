@@ -1,72 +1,130 @@
 <template>
-  <div class="home-page">
-    <!-- 搜索头部 -->
-    <div class="search-header">
-      <div class="header-content">
-        <h1 class="page-title">🏠 House Server - Irvine CA</h1>
-        <p class="page-subtitle">在地图上搜索和发现您的理想家园</p>
-        
-        <!-- 搜索输入框 -->
-        <div class="search-container">
-          <el-input
-            v-model="searchQuery"
-            placeholder="输入邮编、地址或关键字搜索房屋..."
-            size="large"
-            @keyup.enter="performSearch"
-            @input="handleSearchInput"
-            clearable
-            class="search-input"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-            <template #append>
-              <el-button @click="performSearch" type="primary" size="large">
-                <el-icon><Search /></el-icon>
-                搜索
-              </el-button>
-            </template>
-          </el-input>
-          
-          <!-- 搜索建议 -->
-          <div v-if="showSuggestions && searchSuggestions.length > 0" class="search-suggestions">
-            <div 
-              v-for="suggestion in searchSuggestions"
-              :key="suggestion"
-              class="suggestion-item"
-              @click="selectSuggestion(suggestion)"
-            >
-              <el-icon><Location /></el-icon>
-              <span>{{ suggestion }}</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 快速搜索标签 -->
-        <div class="quick-search">
-          <span class="quick-label">快速搜索:</span>
-          <el-tag 
-            v-for="tag in quickSearchTags"
-            :key="tag"
-            @click="selectQuickSearch(tag)"
-            class="quick-tag"
-            effect="plain"
-          >
-            {{ tag }}
-          </el-tag>
-        </div>
-      </div>
+  <div class="search-page">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <h1>地图搜索房屋</h1>
+      <p>在Irvine地区找到您理想的居住位置</p>
     </div>
 
-    <!-- 地图搜索区域 -->
-    <div class="map-search-container">
+    <!-- 搜索控制面板 -->
+    <div class="search-controls">
+      <el-card class="control-card">
+        <div class="controls-grid">
+          <!-- 位置搜索 -->
+          <div class="control-group">
+            <label>搜索位置</label>
+            <el-input
+              v-model="searchLocation"
+              placeholder="输入地址或地点..."
+              @keyup.enter="searchByLocation"
+            >
+              <template #prefix>
+                <el-icon><Location /></el-icon>
+              </template>
+              <template #append>
+                <el-button @click="searchByLocation" type="primary">
+                  <el-icon><Search /></el-icon>
+                </el-button>
+              </template>
+            </el-input>
+          </div>
+
+          <!-- 半径设置 -->
+          <div class="control-group">
+            <label>搜索半径</label>
+            <el-slider
+              v-model="searchRadius"
+              :min="0.5"
+              :max="10"
+              :step="0.5"
+              show-input
+              :format-tooltip="formatRadius"
+            />
+            <div class="radius-label">{{ searchRadius }} 公里</div>
+          </div>
+
+          <!-- 价格范围 -->
+          <div class="control-group">
+            <label>价格范围</label>
+            <div class="price-range">
+              <el-input
+                v-model.number="priceRange[0]"
+                placeholder="最低价格"
+                type="number"
+              >
+                <template #prepend>$</template>
+              </el-input>
+              <span class="range-separator">-</span>
+              <el-input
+                v-model.number="priceRange[1]"
+                placeholder="最高价格"
+                type="number"
+              >
+                <template #prepend>$</template>
+              </el-input>
+            </div>
+          </div>
+
+          <!-- 房屋类型 -->
+          <div class="control-group">
+            <label>房屋类型</label>
+            <el-checkbox-group v-model="selectedTypes">
+              <el-checkbox label="House">House</el-checkbox>
+              <el-checkbox label="Condo">Condo</el-checkbox>
+              <el-checkbox label="Townhouse">Townhouse</el-checkbox>
+            </el-checkbox-group>
+          </div>
+
+          <!-- 卧室数量 -->
+          <div class="control-group">
+            <label>卧室数量</label>
+            <el-select v-model="minBedrooms" placeholder="最少卧室" clearable>
+              <el-option label="不限" :value="null" />
+              <el-option label="1+" :value="1" />
+              <el-option label="2+" :value="2" />
+              <el-option label="3+" :value="3" />
+              <el-option label="4+" :value="4" />
+              <el-option label="5+" :value="5" />
+            </el-select>
+          </div>
+
+          <!-- 卫生间数量 -->
+          <div class="control-group">
+            <label>卫生间数量</label>
+            <el-select v-model="minBathrooms" placeholder="最少卫生间" clearable>
+              <el-option label="不限" :value="null" />
+              <el-option label="1+" :value="1" />
+              <el-option label="1.5+" :value="1.5" />
+              <el-option label="2+" :value="2" />
+              <el-option label="2.5+" :value="2.5" />
+              <el-option label="3+" :value="3" />
+            </el-select>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="control-actions">
+            <el-button @click="resetFilters" size="large">
+              <el-icon><Refresh /></el-icon>
+              重置
+            </el-button>
+            <el-button type="primary" @click="performSearch" size="large">
+              <el-icon><Search /></el-icon>
+              搜索房屋
+            </el-button>
+          </div>
+        </div>
+      </el-card>
+    </div>
+
+    <!-- 地图和结果 -->
+    <div class="search-results">
       <el-row :gutter="20">
         <!-- 地图区域 -->
         <el-col :xs="24" :lg="16">
           <el-card class="map-card">
             <template #header>
               <div class="map-header">
-                <h3>地图搜索</h3>
+                <h3>地图视图</h3>
                 <div class="map-controls">
                   <el-button-group size="small">
                     <el-button 
@@ -82,10 +140,6 @@
                       卫星
                     </el-button>
                   </el-button-group>
-                  <el-button @click="centerOnIrvine" size="small">
-                    <el-icon><Aim /></el-icon>
-                    回到Irvine
-                  </el-button>
                 </div>
               </div>
             </template>
@@ -101,7 +155,7 @@
           </el-card>
         </el-col>
 
-        <!-- 搜索结果侧边栏 -->
+        <!-- 搜索结果 -->
         <el-col :xs="24" :lg="8">
           <el-card class="results-card">
             <template #header>
@@ -117,7 +171,7 @@
 
             <div class="results-content">
               <!-- 搜索统计 -->
-              <div class="search-stats" v-if="searchResults.length > 0">
+              <div class="search-stats">
                 <div class="stat-item">
                   <span class="stat-label">找到房屋</span>
                   <span class="stat-value">{{ searchResults.length }} 个</span>
@@ -169,15 +223,10 @@
 
                 <!-- 空状态 -->
                 <div v-if="!searchLoading && searchResults.length === 0" class="empty-results">
-                  <el-empty description="请输入搜索条件查找房屋">
-                    <div class="empty-tips">
-                      <p>💡 搜索提示:</p>
-                      <ul>
-                        <li>输入邮编，如: 92614</li>
-                        <li>输入地址，如: Harvard Ave</li>
-                        <li>输入区域，如: Irvine</li>
-                      </ul>
-                    </div>
+                  <el-empty description="没有找到符合条件的房屋">
+                    <el-button type="primary" @click="resetFilters">
+                      调整搜索条件
+                    </el-button>
                   </el-empty>
                 </div>
               </div>
@@ -243,7 +292,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHousesStore } from '../stores/houses'
 import HouseMap from '../components/HouseMap.vue'
@@ -252,23 +301,18 @@ const router = useRouter()
 const housesStore = useHousesStore()
 
 // 响应式数据
-const searchQuery = ref('')
+const searchLocation = ref('Irvine, CA')
+const searchRadius = ref(5)
+const priceRange = ref([500000, 2000000])
+const selectedTypes = ref(['House', 'Condo', 'Townhouse'])
+const minBedrooms = ref(null)
+const minBathrooms = ref(null)
+const mapView = ref('map')
 const searchResults = ref([])
 const searchLoading = ref(false)
 const selectedHouse = ref(null)
 const showHouseDetail = ref(false)
-const mapView = ref('map')
-const searchRadius = ref(5)
 const centerLocation = ref({ lat: 33.6846, lng: -117.8265 })
-const showSuggestions = ref(false)
-
-// 搜索建议和快速搜索标签
-const searchSuggestions = ref([])
-const quickSearchTags = ref([
-  '92614', '92620', '92612', '92618', '92617', 
-  'Harvard Ave', 'Yale Loop', 'Stanford Dr', 'MIT Way', 'Berkeley St',
-  'Irvine', 'Newport Beach', 'Costa Mesa'
-])
 
 // 计算属性
 const averagePrice = computed(() => {
@@ -298,51 +342,49 @@ const formatArea = (area) => {
   return `${new Intl.NumberFormat('en-US').format(area)} sqft`
 }
 
-const handleSearchInput = () => {
-  if (searchQuery.value.length > 1) {
-    // 生成搜索建议
-    searchSuggestions.value = quickSearchTags.value.filter(tag => 
-      tag.toLowerCase().includes(searchQuery.value.toLowerCase())
-    ).slice(0, 5)
-    showSuggestions.value = true
-  } else {
-    showSuggestions.value = false
-  }
+const formatRadius = (value) => {
+  return `${value} 公里`
 }
 
-const selectSuggestion = (suggestion) => {
-  searchQuery.value = suggestion
-  showSuggestions.value = false
-  performSearch()
-}
-
-const selectQuickSearch = (tag) => {
-  searchQuery.value = tag
-  performSearch()
-}
-
-const performSearch = async () => {
-  if (!searchQuery.value.trim()) {
-    ElMessage.warning('请输入搜索条件')
+const searchByLocation = async () => {
+  if (!searchLocation.value.trim()) {
+    ElMessage.warning('请输入搜索位置')
     return
   }
 
-  searchLoading.value = true
-  showSuggestions.value = false
+  // 模拟地理位置解析
+  centerLocation.value = { lat: 33.6846, lng: -117.8265 }
+  ElMessage.success(`已定位到: ${searchLocation.value}`)
+  await performSearch()
+}
 
+const performSearch = async () => {
+  searchLoading.value = true
+  
   try {
     // 获取所有房屋数据
     await housesStore.fetchHouses()
     let results = [...housesStore.houses]
 
-    // 根据搜索条件筛选
-    const query = searchQuery.value.toLowerCase()
-    results = results.filter(house => 
-      house.address.toLowerCase().includes(query) ||
-      house.city.toLowerCase().includes(query) ||
-      house.zipCode.includes(query) ||
-      house.state.toLowerCase().includes(query)
-    )
+    // 应用筛选条件
+    results = results.filter(house => {
+      // 价格筛选
+      if (priceRange.value[0] && house.price < priceRange.value[0]) return false
+      if (priceRange.value[1] && house.price > priceRange.value[1]) return false
+
+      // 房屋类型筛选
+      if (selectedTypes.value.length > 0 && !selectedTypes.value.includes(house.houseType)) {
+        return false
+      }
+
+      // 卧室数量筛选
+      if (minBedrooms.value && house.bedrooms < minBedrooms.value) return false
+
+      // 卫生间数量筛选
+      if (minBathrooms.value && house.bathrooms < minBathrooms.value) return false
+
+      return true
+    })
 
     // 计算距离（模拟）
     results = results.map(house => ({
@@ -357,16 +399,7 @@ const performSearch = async () => {
     results = results.filter(house => house.distance <= searchRadius.value)
 
     searchResults.value = results
-    
-    if (results.length > 0) {
-      ElMessage.success(`找到 ${results.length} 个符合条件的房屋`)
-      // 如果有结果，将地图中心移到第一个结果附近
-      if (results[0]) {
-        centerLocation.value = { lat: results[0].latitude, lng: results[0].longitude }
-      }
-    } else {
-      ElMessage.info('没有找到符合条件的房屋')
-    }
+    ElMessage.success(`找到 ${results.length} 个符合条件的房屋`)
     
   } catch (error) {
     ElMessage.error('搜索失败：' + error.message)
@@ -386,6 +419,17 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
   return R * c
 }
 
+const resetFilters = () => {
+  searchLocation.value = 'Irvine, CA'
+  searchRadius.value = 5
+  priceRange.value = [500000, 2000000]
+  selectedTypes.value = ['House', 'Condo', 'Townhouse']
+  minBedrooms.value = null
+  minBathrooms.value = null
+  searchResults.value = []
+  centerLocation.value = { lat: 33.6846, lng: -117.8265 }
+}
+
 const selectHouse = (house) => {
   selectedHouse.value = house
   showHouseDetail.value = true
@@ -401,137 +445,96 @@ const centerOnHouse = (house) => {
   ElMessage.success(`已定位到 ${house.address}`)
 }
 
-const centerOnIrvine = () => {
-  centerLocation.value = { lat: 33.6846, lng: -117.8265 }
-  ElMessage.info('已回到Irvine中心')
-}
-
 const handleHouseSelected = (house) => {
   selectHouse(house)
 }
 
 // 生命周期
 onMounted(async () => {
-  // 初始加载所有房屋数据
-  await housesStore.fetchHouses()
-})
-
-// 监听搜索查询变化
-watch(searchQuery, (newValue) => {
-  if (newValue.length === 0) {
-    searchResults.value = []
-    showSuggestions.value = false
-  }
+  await performSearch()
 })
 </script>
 
 <style scoped>
-.home-page {
+.search-page {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 20px;
 }
 
-/* 搜索头部 */
-.search-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 40px 20px;
-  border-radius: 16px;
-  margin-bottom: 30px;
+/* 页面头部 */
+.page-header {
   text-align: center;
-}
-
-.header-content {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.page-title {
-  font-size: 2.5rem;
-  font-weight: bold;
-  margin-bottom: 16px;
-  line-height: 1.2;
-}
-
-.page-subtitle {
-  font-size: 1.1rem;
   margin-bottom: 30px;
-  opacity: 0.9;
 }
 
-.search-container {
-  position: relative;
-  margin-bottom: 20px;
-}
-
-.search-input {
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.search-input :deep(.el-input__wrapper) {
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.search-suggestions {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 600px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.suggestion-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  cursor: pointer;
+.page-header h1 {
+  font-size: 2.5rem;
   color: #2c3e50;
-  transition: background-color 0.3s;
+  margin-bottom: 16px;
 }
 
-.suggestion-item:hover {
-  background: #f8fafc;
+.page-header p {
+  font-size: 1.1rem;
+  color: #7f8c8d;
 }
 
-.suggestion-item .el-icon {
-  color: #667eea;
+/* 搜索控制面板 */
+.search-controls {
+  margin-bottom: 30px;
 }
 
-.quick-search {
+.control-card {
+  border-radius: 12px;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  align-items: end;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-group label {
+  font-weight: 500;
+  color: #5a6c7d;
+  font-size: 0.9rem;
+}
+
+.price-range {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+}
+
+.range-separator {
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.radius-label {
+  text-align: center;
+  color: #667eea;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.control-actions {
+  display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  justify-content: center;
+  margin-top: 10px;
 }
 
-.quick-label {
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
-.quick-tag {
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.quick-tag:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-/* 地图搜索区域 */
-.map-search-container {
+/* 搜索结果 */
+.search-results {
   margin-bottom: 40px;
 }
 
@@ -549,12 +552,6 @@ watch(searchQuery, (newValue) => {
 .map-header h3 {
   margin: 0;
   color: #2c3e50;
-}
-
-.map-controls {
-  display: flex;
-  gap: 12px;
-  align-items: center;
 }
 
 .map-container {
@@ -699,29 +696,6 @@ watch(searchQuery, (newValue) => {
   padding: 40px 20px;
 }
 
-.empty-tips {
-  margin-top: 20px;
-  text-align: left;
-  max-width: 300px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.empty-tips p {
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 8px;
-}
-
-.empty-tips ul {
-  text-align: left;
-  color: #7f8c8d;
-}
-
-.empty-tips li {
-  margin-bottom: 4px;
-}
-
 /* 房屋详情弹窗 */
 .house-detail-content {
   padding: 20px 0;
@@ -804,17 +778,12 @@ watch(searchQuery, (newValue) => {
 }
 
 @media (max-width: 768px) {
-  .page-title {
-    font-size: 2rem;
+  .controls-grid {
+    grid-template-columns: 1fr;
   }
   
-  .search-container {
-    margin-bottom: 16px;
-  }
-  
-  .quick-search {
+  .control-actions {
     flex-direction: column;
-    gap: 8px;
   }
   
   .house-item {
@@ -833,10 +802,6 @@ watch(searchQuery, (newValue) => {
   
   .detail-actions {
     flex-direction: column;
-  }
-  
-  .detail-info {
-    padding: 0;
   }
 }
 </style>
